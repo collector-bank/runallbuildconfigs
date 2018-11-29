@@ -39,7 +39,7 @@ namespace RunAllBuildConfigs
             if (args.Length != 0 && (args.Length != 1 || !args[0].StartsWith("@")))
             {
                 Console.WriteLine(
-@"RunAllBuildConfigs 0.007 - Trigger all builds.
+@"RunAllBuildConfigs 0.008 - Trigger all builds.
 
 Usage: RunAllBuildConfigs.exe
 
@@ -69,12 +69,12 @@ BuildVerbose");
                 }
                 catch (ApplicationException ex)
                 {
-                    LogColor(ex.Message, ConsoleColor.Red);
+                    LogTCError(ex.Message);
                     result = 1;
                 }
                 catch (Exception ex)
                 {
-                    LogColor(ex.ToString(), ConsoleColor.Red);
+                    LogTCError(ex.ToString());
                     result = 1;
                 }
             }
@@ -121,7 +121,7 @@ BuildVerbose");
             int totalsteps = builds.Sum(b => b.steps.Count);
             int enabledsteps = builds.Sum(b => b.steps.Count(s => (!s.disabled.HasValue || !s.disabled.Value) && !s.disable));
 
-            LogColor($"Found {totalbuilds} build configs, with {enabledsteps}/{totalsteps} enabled build steps.", ConsoleColor.Green);
+            Log($"Found {totalbuilds} build configs, with {enabledsteps}/{totalsteps} enabled build steps.", ConsoleColor.Green);
 
             if (sortedExecution)
             {
@@ -156,9 +156,9 @@ BuildVerbose");
             enabledsteps = builds.Sum(b => b.steps.Count(s => (!s.disabled.HasValue || !s.disabled.Value) && !s.disable));
 
 
-            LogColor($"Excluding {dontrunbuilds} builds configs.", ConsoleColor.Green);
-            LogColor($"Disabling {disablesteps} additional build steps.", ConsoleColor.Green);
-            LogColor($"Triggering {enabledbuilds}/{totalbuilds} build configs, with {enabledsteps}/{totalsteps} enabled build steps...", ConsoleColor.Green);
+            Log($"Excluding {dontrunbuilds} builds configs.", ConsoleColor.Green);
+            Log($"Disabling {disablesteps} additional build steps.", ConsoleColor.Green);
+            Log($"Triggering {enabledbuilds}/{totalbuilds} build configs, with {enabledsteps}/{totalsteps} enabled build steps...", ConsoleColor.Green);
 
             TriggerBuilds(server, username, password, builds, dryRun);
         }
@@ -201,7 +201,7 @@ BuildVerbose");
                 }
                 else
                 {
-                    LogColor($"Couldn't exclude build config (me): '{buildConfig}'", ConsoleColor.Yellow);
+                    LogTCWarning($"Couldn't exclude build config (me): '{buildConfig}'");
                 }
             }
         }
@@ -223,7 +223,7 @@ BuildVerbose");
                     }
                     else
                     {
-                        LogColor($"Couldn't exclude build config: '{buildConfig}'", ConsoleColor.Yellow);
+                        LogTCWarning($"Couldn't exclude build config: '{buildConfig}'");
                     }
                 }
             }
@@ -369,7 +369,7 @@ BuildVerbose");
             {
                 if (build.DontRun)
                 {
-                    LogColor($"{build.buildid}", ConsoleColor.DarkGray);
+                    Log($"{build.buildid}", ConsoleColor.DarkGray);
                 }
                 else
                 {
@@ -389,7 +389,7 @@ BuildVerbose");
 
                     if ((buildstep.disabled.HasValue && buildstep.disabled.Value) || buildstep.disable)
                     {
-                        LogColor($"    {stepname} {steptype} {stepid} {disabled} {disable}", ConsoleColor.DarkGray);
+                        Log($"    {stepname} {steptype} {stepid} {disabled} {disable}", ConsoleColor.DarkGray);
                     }
                     else
                     {
@@ -502,7 +502,7 @@ BuildVerbose");
 
                 foreach (string v in values.Where(v => !v.Contains('=')))
                 {
-                    LogColor($"Ignoring malformed environment variable ({variableName}): '{v}'", ConsoleColor.Yellow);
+                    LogTCWarning($"Ignoring malformed environment variable ({variableName}): '{v}'");
                 }
 
                 values = values.Where(v => v.Contains('=')).ToArray();
@@ -533,7 +533,7 @@ BuildVerbose");
                         foreach (Buildstep step in build.steps.Where(s => s.disable))
                         {
                             string stepAddress = $"{server}/app/rest/buildTypes/{build.buildid}/steps/{step.stepid}/disabled";
-                            LogColor($"Disabling: {build.buildid}.{step.stepid}: '{step.stepname}'", ConsoleColor.DarkMagenta);
+                            Log($"Disabling: {build.buildid}.{step.stepid}: '{step.stepname}'", ConsoleColor.DarkMagenta);
                             PutPlainTextContent(client, stepAddress, "true", "BuildDebug4", build.DontRun || dryRun);
                         }
 
@@ -548,7 +548,7 @@ BuildVerbose");
 
                         string buildContent = $"<build><buildType id='{build.buildid}'/>{propertiesstring}</build>";
                         string buildAddress = $"{server}/app/rest/buildQueue";
-                        LogColor($"Triggering build: {build.buildid}", ConsoleColor.Magenta);
+                        Log($"Triggering build: {build.buildid}", ConsoleColor.Magenta);
                         dynamic queueResult = PostXmlContent(client, buildAddress, buildContent, "BuildDebug5", build.DontRun || dryRun);
 
                         if (!(build.DontRun || dryRun))
@@ -562,12 +562,12 @@ BuildVerbose");
                                 dynamic buildResult = GetJsonContent(client, queueAddress, "BuildDebug6");
                                 if (buildResult.waitReason == null)
                                 {
-                                    LogColor($"Build {buildid} queued.", ConsoleColor.Green);
+                                    Log($"Build {buildid} queued.", ConsoleColor.Green);
                                     added = true;
                                 }
                                 else
                                 {
-                                    LogColor($"Build {buildid} not queued yet: {buildResult.waitReason}", ConsoleColor.Green);
+                                    Log($"Build {buildid} not queued yet: {buildResult.waitReason}", ConsoleColor.Green);
                                 }
                             }
                             while (!added);
@@ -576,7 +576,7 @@ BuildVerbose");
                         foreach (Buildstep step in build.steps.Where(s => s.disable))
                         {
                             string stepAddress = $"{server}/app/rest/buildTypes/{build.buildid}/steps/{step.stepid}/disabled";
-                            LogColor($"Enabling: {build.buildid}.{step.stepid}: '{step.stepname}'", ConsoleColor.DarkMagenta);
+                            Log($"Enabling: {build.buildid}.{step.stepid}: '{step.stepname}'", ConsoleColor.DarkMagenta);
                             PutPlainTextContent(client, stepAddress, "false", "BuildDebug7", build.DontRun || dryRun);
                         }
                     });
@@ -990,7 +990,35 @@ BuildVerbose");
             return result;
         }
 
-        private static void LogColor(string message, ConsoleColor color)
+        private static void LogTCError(string message)
+        {
+            ConsoleColor oldColor = Console.ForegroundColor;
+            try
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"##teamcity[message text='{message}' status='ERROR']");
+            }
+            finally
+            {
+                Console.ForegroundColor = oldColor;
+            }
+        }
+
+        private static void LogTCWarning(string message)
+        {
+            ConsoleColor oldColor = Console.ForegroundColor;
+            try
+            {
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($"##teamcity[message text='{message}' status='WARNING']");
+            }
+            finally
+            {
+                Console.ForegroundColor = oldColor;
+            }
+        }
+
+        private static void Log(string message, ConsoleColor color)
         {
             ConsoleColor oldColor = Console.ForegroundColor;
             try
