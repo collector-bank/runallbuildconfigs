@@ -565,6 +565,11 @@ BuildVerbose");
                                     Log($"Build {buildid} queued.", ConsoleColor.Green);
                                     added = true;
                                 }
+                                else if (buildResult.waitReason == "There are no compatible agents which can run this build")
+                                {
+                                    Log($"Build {buildid} cannot be built, leaving it in queue: {buildResult.waitReason}", ConsoleColor.Yellow);
+                                    added = true;
+                                }
                                 else
                                 {
                                     Log($"Build {buildid} not queued yet: {buildResult.waitReason}", ConsoleColor.Green);
