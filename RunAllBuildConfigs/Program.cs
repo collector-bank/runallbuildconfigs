@@ -565,14 +565,14 @@ BuildVerbose");
                                     Log($"Build {buildid} queued.", ConsoleColor.Green);
                                     added = true;
                                 }
-                                else if (buildResult.waitReason == "There are no compatible agents which can run this build")
+                                else if (buildResult.waitReason.EndsWith("not queued yet: Build settings have not been finalized"))
                                 {
-                                    Log($"Build {buildid} cannot be built, leaving it in queue: {buildResult.waitReason}", ConsoleColor.Yellow);
-                                    added = true;
+                                    Log($"Build {buildid} not queued yet: {buildResult.waitReason}");
                                 }
                                 else
                                 {
-                                    Log($"Build {buildid} not queued yet: {buildResult.waitReason}", ConsoleColor.Green);
+                                    Log($"Broken build {buildid} is broken, cannot be bothered: {buildResult.waitReason}", ConsoleColor.Yellow);
+                                    added = true;
                                 }
                             }
                             while (!added);
