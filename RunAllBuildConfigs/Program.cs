@@ -31,6 +31,7 @@ namespace RunAllBuildConfigs
         }
 
         static bool _buildDebug;
+        static int RestDebugCount = 0;
         static Dictionary<string, bool> _writtenLogs = new Dictionary<string, bool>();
 
         static int Main(string[] args)
@@ -201,7 +202,7 @@ BuildVerbose");
                 }
                 else
                 {
-                    LogTCWarning($"Couldn't exclude build config (me): '{buildConfig}'");
+                    LogTCWarning($"Could not exclude build config (me): {buildConfig}");
                 }
             }
         }
@@ -223,7 +224,7 @@ BuildVerbose");
                     }
                     else
                     {
-                        LogTCWarning($"Couldn't exclude build config: '{buildConfig}'");
+                        LogTCWarning($"Could not exclude build config: {buildConfig}");
                     }
                 }
             }
@@ -306,7 +307,7 @@ BuildVerbose");
 
                 string address = $"{server}/app/rest/buildTypes";
 
-                dynamic builds = GetJsonContent(client, address, "BuildDebug1");
+                dynamic builds = GetJsonContent(client, address);
 
                 foreach (JProperty propertyBuild in builds)
                 {
@@ -318,7 +319,7 @@ BuildVerbose");
 
                             address = $"{server}/app/rest/buildTypes/{buildid}";
 
-                            dynamic buildConfig = GetJsonContent(client, address, "BuildDebug2");
+                            dynamic buildConfig = GetJsonContent(client, address);
 
                             List<Buildstep> buildsteps = new List<Buildstep>();
 
@@ -502,7 +503,7 @@ BuildVerbose");
 
                 foreach (string v in values.Where(v => !v.Contains('=')))
                 {
-                    LogTCWarning($"Ignoring malformed environment variable ({variableName}): '{v}'");
+                    LogTCWarning($"Ignoring malformed environment variable ({variableName}): {v}");
                 }
 
                 values = values.Where(v => v.Contains('=')).ToArray();
@@ -534,7 +535,7 @@ BuildVerbose");
                         {
                             string stepAddress = $"{server}/app/rest/buildTypes/{build.buildid}/steps/{step.stepid}/disabled";
                             Log($"Disabling: {build.buildid}.{step.stepid}: '{step.stepname}'", ConsoleColor.DarkMagenta);
-                            PutPlainTextContent(client, stepAddress, "true", "BuildDebug4", build.DontRun || dryRun);
+                            PutPlainTextContent(client, stepAddress, "true", build.DontRun || dryRun);
                         }
 
                         string propertiesstring = string.Empty;
@@ -549,7 +550,7 @@ BuildVerbose");
                         string buildContent = $"<build><buildType id='{build.buildid}'/>{propertiesstring}</build>";
                         string buildAddress = $"{server}/app/rest/buildQueue";
                         Log($"Triggering build: {build.buildid}", ConsoleColor.Magenta);
-                        dynamic queueResult = PostXmlContent(client, buildAddress, buildContent, "BuildDebug5", build.DontRun || dryRun);
+                        dynamic queueResult = PostXmlContent(client, buildAddress, buildContent, build.DontRun || dryRun);
 
                         if (!(build.DontRun || dryRun))
                         {
@@ -559,20 +560,20 @@ BuildVerbose");
                                 Thread.Sleep(1000);
                                 string buildid = queueResult.id;
                                 string queueAddress = $"{server}/app/rest/builds/id:{buildid}";
-                                dynamic buildResult = GetJsonContent(client, queueAddress, "BuildDebug6");
+                                dynamic buildResult = GetJsonContent(client, queueAddress);
                                 if (buildResult.waitReason == null)
                                 {
                                     Log($"Build {buildid} queued.", ConsoleColor.Green);
                                     added = true;
                                 }
-                                else if (buildResult.waitReason == "There are no compatible agents which can run this build")
+                                else if (buildResult.waitReason.Value.EndsWith("Build settings have not been finalized"))
                                 {
-                                    Log($"Build {buildid} cannot be built, leaving it in queue: {buildResult.waitReason}", ConsoleColor.Yellow);
-                                    added = true;
+                                    Log($"Build {buildid} not queued yet: {buildResult.waitReason.Value}");
                                 }
                                 else
                                 {
-                                    Log($"Build {buildid} not queued yet: {buildResult.waitReason}", ConsoleColor.Green);
+                                    Log($"Broken build {buildid} is broken, cannot be bothered: {buildResult.waitReason.Value}", ConsoleColor.Yellow);
+                                    added = true;
                                 }
                             }
                             while (!added);
@@ -582,14 +583,14 @@ BuildVerbose");
                         {
                             string stepAddress = $"{server}/app/rest/buildTypes/{build.buildid}/steps/{step.stepid}/disabled";
                             Log($"Enabling: {build.buildid}.{step.stepid}: '{step.stepname}'", ConsoleColor.DarkMagenta);
-                            PutPlainTextContent(client, stepAddress, "false", "BuildDebug7", build.DontRun || dryRun);
+                            PutPlainTextContent(client, stepAddress, "false", build.DontRun || dryRun);
                         }
                     });
                 }
             }
         }
 
-        static string PutPlainTextContent(WebClient client, string address, string content, string debugFilename, bool dryRun)
+        static string PutPlainTextContent(WebClient client, string address, string content, bool dryRun)
         {
             client.Headers["Content-Type"] = "text/plain";
             client.Headers["Accept"] = "text/plain";
@@ -598,7 +599,7 @@ BuildVerbose");
             {
                 if (_buildDebug)
                 {
-                    string debugfile = $"{debugFilename}.txt";
+                    string debugfile = $"BuildDebug_{RestDebugCount++}.txt";
                     if (!_writtenLogs.ContainsKey(debugfile))
                     {
                         File.WriteAllText(debugfile, content);
@@ -612,7 +613,7 @@ BuildVerbose");
                 }
                 if (_buildDebug)
                 {
-                    string resultfile = $"{debugFilename}.result.txt";
+                    string resultfile = $"BuildDebug_{RestDebugCount++}.result.txt";
                     if (!_writtenLogs.ContainsKey(resultfile))
                     {
                         if (result == null)
@@ -634,7 +635,7 @@ BuildVerbose");
             }
         }
 
-        static JObject GetJsonContent(WebClient client, string address, string debugFilename)
+        static JObject GetJsonContent(WebClient client, string address)
         {
             client.Headers["Accept"] = "application/json";
             Log($"Address: '{address}'");
@@ -643,7 +644,7 @@ BuildVerbose");
                 string result = client.DownloadString(address);
                 if (_buildDebug)
                 {
-                    string resultfile = $"{debugFilename}.result.json";
+                    string resultfile = $"BuildDebug_{RestDebugCount++}.result.json";
                     if (!_writtenLogs.ContainsKey(resultfile))
                     {
                         string pretty = JToken.Parse(result).ToString(Formatting.Indented);
@@ -660,7 +661,7 @@ BuildVerbose");
             }
         }
 
-        static JObject PutJsonContent(WebClient client, string address, JObject content, string debugFilename, bool dryRun)
+        static JObject PutJsonContent(WebClient client, string address, JObject content, bool dryRun)
         {
             client.Headers["Content-Type"] = "application/json";
             client.Headers["Accept"] = "application/json";
@@ -669,7 +670,7 @@ BuildVerbose");
             {
                 if (_buildDebug)
                 {
-                    string debugfile = $"{debugFilename}.json";
+                    string debugfile = $"BuildDebug_{RestDebugCount++}.json";
                     if (!_writtenLogs.ContainsKey(debugfile))
                     {
                         string pretty = content.ToString(Formatting.Indented);
@@ -684,7 +685,7 @@ BuildVerbose");
                 }
                 if (_buildDebug)
                 {
-                    string resultfile = $"{debugFilename}.result.json";
+                    string resultfile = $"BuildDebug_{RestDebugCount++}.result.json";
                     if (!_writtenLogs.ContainsKey(resultfile))
                     {
                         if (result == null)
@@ -715,7 +716,7 @@ BuildVerbose");
             }
         }
 
-        static JObject PostXmlContent(WebClient client, string address, string content, string debugFilename, bool dryRun)
+        static JObject PostXmlContent(WebClient client, string address, string content, bool dryRun)
         {
             client.Headers["Content-Type"] = "application/xml";
             client.Headers["Accept"] = "application/json";
@@ -724,7 +725,7 @@ BuildVerbose");
             {
                 if (_buildDebug)
                 {
-                    string debugfile = $"{debugFilename}.xml";
+                    string debugfile = $"BuildDebug_{RestDebugCount++}.xml";
                     if (!_writtenLogs.ContainsKey(debugfile))
                     {
                         File.WriteAllText(debugfile, content);
@@ -738,7 +739,7 @@ BuildVerbose");
                 }
                 if (_buildDebug)
                 {
-                    string resultfile = $"{debugFilename}.result.json";
+                    string resultfile = $"BuildDebug_{RestDebugCount++}.result.json";
                     if (!_writtenLogs.ContainsKey(resultfile))
                     {
                         if (result == null)
