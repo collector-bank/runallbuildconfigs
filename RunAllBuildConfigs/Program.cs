@@ -321,6 +321,23 @@ BuildVerbose");
 
                             dynamic buildConfig = GetJsonContent(client, address);
 
+                            var isdeployment = (buildConfig.settings.property as JArray)
+                                ?.Select(property => new
+                                {
+                                    name = (string)property["name"],
+                                    value = (string)property["value"]
+                                })
+                                .Any(property =>
+                                    property.name?.Equals("buildConfigurationType", StringComparison.OrdinalIgnoreCase) == true
+                                    && property.value?.Equals("DEPLOYMENT", StringComparison.OrdinalIgnoreCase) == true)
+                                ?? false;
+
+                            if (isdeployment)
+                            {
+                                Log($"Skipping {buildid} since it is a deployment build");
+                                continue;
+                            }
+
                             List<Buildstep> buildsteps = new List<Buildstep>();
 
                             foreach (JProperty propertyStep in buildConfig.steps)
