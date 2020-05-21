@@ -15,24 +15,24 @@ namespace RunAllBuildConfigs
     {
         class Buildstep
         {
-            public string stepid { get; set; }
-            public string stepname { get; set; }
-            public string steptype { get; set; }
-            public bool? disabled { get; set; }
-            public bool disable { get; set; }
+            public string Stepid { get; set; }
+            public string Stepname { get; set; }
+            public string Steptype { get; set; }
+            public bool? Disabled { get; set; }
+            public bool Disable { get; set; }
         }
 
         class Build
         {
-            public string buildid { get; set; }
-            public List<Buildstep> steps { get; set; }
-            public Dictionary<string, string> properties { get; set; }
+            public string Buildid { get; set; }
+            public List<Buildstep> Steps { get; set; }
+            public Dictionary<string, string> Properties { get; set; }
             public bool DontRun { get; set; }
         }
 
         static bool _buildDebug;
         static int RestDebugCount = 0;
-        static Dictionary<string, bool> _writtenLogs = new Dictionary<string, bool>();
+        static readonly Dictionary<string, bool> _writtenLogs = new Dictionary<string, bool>();
 
         static int Main(string[] args)
         {
@@ -40,7 +40,7 @@ namespace RunAllBuildConfigs
             if (args.Length != 0 && (args.Length != 1 || !args[0].StartsWith("@")))
             {
                 Console.WriteLine(
-@"RunAllBuildConfigs 0.008 - Trigger all builds.
+@"RunAllBuildConfigs 0.009 - Trigger all builds.
 
 Usage: RunAllBuildConfigs.exe
 
@@ -101,32 +101,32 @@ BuildVerbose");
 
             GetCredentials(out string username, out string password);
 
-            Dictionary<string, string> additionalParameters = GetDictionaryEnvironmentVariable("BuildAdditionalParameters", null);
+            var additionalParameters = GetDictionaryEnvironmentVariable("BuildAdditionalParameters", null);
 
             string[] disabledBuildSteps = GetStringArrayEnvironmentVariable("BuildDisableBuildSteps", null);
             string[] disabledBuildStepTypes = GetStringArrayEnvironmentVariable("BuildDisableBuildStepTypes", null);
             string[] excludedBuildConfigs = GetStringArrayEnvironmentVariable("BuildExcludeBuildConfigs", null);
             string[] excludedBuildStepTypes = GetStringArrayEnvironmentVariable("BuildExcludeBuildStepTypes", null);
 
-            List<Build> builds = LogTCSection("Retrieving build configs and steps", () =>
+            var builds = LogTCSection("Retrieving build configs and steps", () =>
             {
                 return GetBuildConfigs(server, username, password);
             });
 
             foreach (Build build in builds)
             {
-                build.properties = additionalParameters;
+                build.Properties = additionalParameters;
             }
 
             int totalbuilds = builds.Count;
-            int totalsteps = builds.Sum(b => b.steps.Count);
-            int enabledsteps = builds.Sum(b => b.steps.Count(s => (!s.disabled.HasValue || !s.disabled.Value) && !s.disable));
+            int totalsteps = builds.Sum(b => b.Steps.Count);
+            int enabledsteps = builds.Sum(b => b.Steps.Count(s => (!s.Disabled.HasValue || !s.Disabled.Value) && !s.Disable));
 
             Log($"Found {totalbuilds} build configs, with {enabledsteps}/{totalsteps} enabled build steps.", ConsoleColor.Green);
 
             if (sortedExecution)
             {
-                builds = builds.OrderBy(b => b.buildid, StringComparer.OrdinalIgnoreCase).ToList();
+                builds = builds.OrderBy(b => b.Buildid, StringComparer.OrdinalIgnoreCase).ToList();
             }
 
             ExcludeBuildStepTypes(builds, excludedBuildStepTypes);
@@ -149,12 +149,12 @@ BuildVerbose");
 
 
             int dontrunbuilds = builds.Count(b => b.DontRun);
-            int disablesteps = builds.Sum(b => b.steps.Count(s => s.disable));
+            int disablesteps = builds.Sum(b => b.Steps.Count(s => s.Disable));
 
             totalbuilds = builds.Count;
             int enabledbuilds = builds.Count(b => !b.DontRun);
-            totalsteps = builds.Sum(b => b.steps.Count);
-            enabledsteps = builds.Sum(b => b.steps.Count(s => (!s.disabled.HasValue || !s.disabled.Value) && !s.disable));
+            totalsteps = builds.Sum(b => b.Steps.Count);
+            enabledsteps = builds.Sum(b => b.Steps.Count(s => (!s.Disabled.HasValue || !s.Disabled.Value) && !s.Disable));
 
 
             Log($"Excluding {dontrunbuilds} builds configs.", ConsoleColor.Green);
@@ -169,17 +169,17 @@ BuildVerbose");
             if (excludedBuildStepTypes != null && excludedBuildStepTypes.Length > 0)
             {
                 var excludes = builds
-                    .Where(b => b.steps.Any(s => (!s.disabled.HasValue || !s.disabled.Value) && excludedBuildStepTypes.Any(ss => ss == s.steptype)))
+                    .Where(b => b.Steps.Any(s => (!s.Disabled.HasValue || !s.Disabled.Value) && excludedBuildStepTypes.Any(ss => ss == s.Steptype)))
                     .ToArray();
                 Log($"Excluding {excludes.Length} build configs (steptype).");
                 foreach (var build in excludes)
                 {
-                    List<string> excludesteps = build.steps
-                        .Where(s => (!s.disabled.HasValue || !s.disabled.Value) && excludedBuildStepTypes.Any(ss => ss == s.steptype))
-                        .Select(s => $"{s.stepname}|{s.steptype}")
+                    List<string> excludesteps = build.Steps
+                        .Where(s => (!s.Disabled.HasValue || !s.Disabled.Value) && excludedBuildStepTypes.Any(ss => ss == s.Steptype))
+                        .Select(s => $"{s.Stepname}|{s.Steptype}")
                         .ToList();
                     string reason = string.Join(", ", excludesteps);
-                    Log($"Excluding build config: '{build.buildid}' ({reason})");
+                    Log($"Excluding build config: '{build.Buildid}' ({reason})");
                     build.DontRun = true;
                 }
             }
@@ -187,16 +187,16 @@ BuildVerbose");
 
         static void ExcludeMe(List<Build> builds)
         {
-            Dictionary<string, string> tcvariables = GetTeamcityBuildVariables();
+            var tcvariables = GetTeamcityBuildVariables();
             if (tcvariables.ContainsKey("teamcity.buildType.id"))
             {
                 string buildConfig = tcvariables["teamcity.buildType.id"];
-                Build[] excludes = builds.Where(b => b.buildid.Equals(buildConfig, StringComparison.OrdinalIgnoreCase)).ToArray();
+                var excludes = builds.Where(b => b.Buildid.Equals(buildConfig, StringComparison.OrdinalIgnoreCase)).ToArray();
                 if (excludes.Length > 0)
                 {
                     foreach (Build build in excludes)
                     {
-                        Log($"Excluding build config (me): '{build.buildid}'");
+                        Log($"Excluding build config (me): '{build.Buildid}'");
                         build.DontRun = true;
                     }
                 }
@@ -213,12 +213,12 @@ BuildVerbose");
             {
                 foreach (string buildConfig in excludedBuildConfigs)
                 {
-                    Build[] excludes = builds.Where(b => b.buildid.Equals(buildConfig, StringComparison.OrdinalIgnoreCase)).ToArray();
+                    var excludes = builds.Where(b => b.Buildid.Equals(buildConfig, StringComparison.OrdinalIgnoreCase)).ToArray();
                     if (excludes.Length > 0)
                     {
                         foreach (Build build in excludes)
                         {
-                            Log($"Excluding build config: '{build.buildid}'");
+                            Log($"Excluding build config: '{build.Buildid}'");
                             build.DontRun = true;
                         }
                     }
@@ -236,9 +236,9 @@ BuildVerbose");
             {
                 foreach (Build build in builds)
                 {
-                    foreach (Buildstep buildstep in build.steps.Where(s => (!s.disabled.HasValue || !s.disabled.Value) && disabledBuildSteps.Contains(s.stepid)))
+                    foreach (Buildstep buildstep in build.Steps.Where(s => (!s.Disabled.HasValue || !s.Disabled.Value) && disabledBuildSteps.Contains(s.Stepid)))
                     {
-                        buildstep.disable = true;
+                        buildstep.Disable = true;
                     }
                 }
             }
@@ -250,9 +250,9 @@ BuildVerbose");
             {
                 foreach (Build build in builds)
                 {
-                    foreach (Buildstep buildstep in build.steps.Where(s => (!s.disabled.HasValue || !s.disabled.Value) && disabledBuildStepTypes.Contains(s.steptype)))
+                    foreach (Buildstep buildstep in build.Steps.Where(s => (!s.Disabled.HasValue || !s.Disabled.Value) && disabledBuildStepTypes.Contains(s.Steptype)))
                     {
-                        buildstep.disable = true;
+                        buildstep.Disable = true;
                     }
                 }
             }
@@ -269,7 +269,7 @@ BuildVerbose");
 
             if (server == null)
             {
-                Dictionary<string, string> tcvariables = GetTeamcityConfigVariables();
+                var tcvariables = GetTeamcityConfigVariables();
 
                 if (server == null && tcvariables.ContainsKey("teamcity.serverUrl"))
                 {
@@ -295,77 +295,75 @@ BuildVerbose");
 
         static List<Build> GetBuildConfigs(string server, string username, string password)
         {
-            List<Build> buildConfigs = new List<Build>();
+            var buildConfigs = new List<Build>();
 
-            using (WebClient client = new WebClient())
+            using var client = new WebClient();
+            if (username != null && password != null)
             {
-                if (username != null && password != null)
+                string credentials = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{username}:{password}"));
+                client.Headers[HttpRequestHeader.Authorization] = $"Basic {credentials}";
+            }
+
+            string address = $"{server}/app/rest/buildTypes";
+
+            dynamic builds = GetJsonContent(client, address);
+
+            foreach (JProperty propertyBuild in builds)
+            {
+                if (propertyBuild.First.Type == JTokenType.Array)
                 {
-                    string credentials = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{username}:{password}"));
-                    client.Headers[HttpRequestHeader.Authorization] = $"Basic {credentials}";
-                }
-
-                string address = $"{server}/app/rest/buildTypes";
-
-                dynamic builds = GetJsonContent(client, address);
-
-                foreach (JProperty propertyBuild in builds)
-                {
-                    if (propertyBuild.First.Type == JTokenType.Array)
+                    foreach (dynamic build in propertyBuild.First)
                     {
-                        foreach (dynamic build in propertyBuild.First)
+                        string buildid = build.id;
+
+                        address = $"{server}/app/rest/buildTypes/{buildid}";
+
+                        dynamic buildConfig = GetJsonContent(client, address);
+
+                        var isdeployment = (buildConfig.settings.property as JArray)
+                            ?.Select(property => new
+                            {
+                                name = (string)property["name"],
+                                value = (string)property["value"]
+                            })
+                            .Any(property =>
+                                property.name?.Equals("buildConfigurationType", StringComparison.OrdinalIgnoreCase) == true
+                                && property.value?.Equals("DEPLOYMENT", StringComparison.OrdinalIgnoreCase) == true)
+                            ?? false;
+
+                        if (isdeployment)
                         {
-                            string buildid = build.id;
+                            Log($"Skipping {buildid} since it is a deployment build.");
+                            continue;
+                        }
 
-                            address = $"{server}/app/rest/buildTypes/{buildid}";
+                        var buildsteps = new List<Buildstep>();
 
-                            dynamic buildConfig = GetJsonContent(client, address);
-
-                            var isdeployment = (buildConfig.settings.property as JArray)
-                                ?.Select(property => new
-                                {
-                                    name = (string)property["name"],
-                                    value = (string)property["value"]
-                                })
-                                .Any(property =>
-                                    property.name?.Equals("buildConfigurationType", StringComparison.OrdinalIgnoreCase) == true
-                                    && property.value?.Equals("DEPLOYMENT", StringComparison.OrdinalIgnoreCase) == true)
-                                ?? false;
-
-                            if (isdeployment)
+                        foreach (JProperty propertyStep in buildConfig.steps)
+                        {
+                            if (propertyStep.First.Type == JTokenType.Array)
                             {
-                                Log($"Skipping {buildid} since it is a deployment build");
-                                continue;
-                            }
-
-                            List<Buildstep> buildsteps = new List<Buildstep>();
-
-                            foreach (JProperty propertyStep in buildConfig.steps)
-                            {
-                                if (propertyStep.First.Type == JTokenType.Array)
+                                foreach (dynamic step in propertyStep.First)
                                 {
-                                    foreach (dynamic step in propertyStep.First)
+                                    buildsteps.Add(new Buildstep
                                     {
-                                        buildsteps.Add(new Buildstep
-                                        {
-                                            stepid = step.id,
-                                            stepname = step.name,
-                                            steptype = step.type,
-                                            disabled = step.disabled,
-                                            disable = false
-                                        });
-                                    }
+                                        Stepid = step.id,
+                                        Stepname = step.name,
+                                        Steptype = step.type,
+                                        Disabled = step.disabled,
+                                        Disable = false
+                                    });
                                 }
                             }
-
-                            buildConfigs.Add(new Build
-                            {
-                                buildid = buildid,
-                                steps = buildsteps,
-                                properties = new Dictionary<string, string>(),
-                                DontRun = false
-                            });
                         }
+
+                        buildConfigs.Add(new Build
+                        {
+                            Buildid = buildid,
+                            Steps = buildsteps,
+                            Properties = new Dictionary<string, string>(),
+                            DontRun = false
+                        });
                     }
                 }
             }
@@ -376,36 +374,36 @@ BuildVerbose");
         static void PrintBuildSteps(List<Build> builds)
         {
             int[] collengths = {
-                builds.Max(b => b.steps.Max(s => s.stepname.Length)),
-                builds.Max(b => b.steps.Max(s => s.steptype.Length)),
-                builds.Max(b => b.steps.Max(s => s.stepid.Length)),
-                builds.Max(b => b.steps.Max(s => s.disabled.HasValue && s.disabled.Value ? "Disabled".Length : "Enabled".Length)),
-                builds.Max(b => b.steps.Max(s => s.disable? "Disable".Length : "Enable".Length))
+                builds.Max(b => b.Steps.Max(s => s.Stepname.Length)),
+                builds.Max(b => b.Steps.Max(s => s.Steptype.Length)),
+                builds.Max(b => b.Steps.Max(s => s.Stepid.Length)),
+                builds.Max(b => b.Steps.Max(s => s.Disabled.HasValue && s.Disabled.Value ? "Disabled".Length : "Enabled".Length)),
+                builds.Max(b => b.Steps.Max(s => s.Disable? "Disable".Length : "Enable".Length))
             };
 
-            foreach (Build build in builds)
+            foreach (var build in builds)
             {
                 if (build.DontRun)
                 {
-                    Log($"{build.buildid}", ConsoleColor.DarkGray);
+                    Log($"{build.Buildid}", ConsoleColor.DarkGray);
                 }
                 else
                 {
-                    Log($"{build.buildid}");
+                    Log($"{build.Buildid}");
                 }
                 //Log($"{build.buildid}: {string.Join(",", build.steps.Select(s => $"{s.stepname}|{s.steptype}"))}");
-                foreach (Buildstep buildstep in build.steps)
+                foreach (Buildstep buildstep in build.Steps)
                 {
-                    string stepname = $"'{buildstep.stepname.ToString()}'".PadRight(collengths[0] + 2);
-                    string steptype = buildstep.steptype.ToString().PadRight(collengths[1]);
-                    string stepid = buildstep.stepid.ToString().PadRight(collengths[2]);
+                    string stepname = $"'{buildstep.Stepname}'".PadRight(collengths[0] + 2);
+                    string steptype = buildstep.Steptype.ToString().PadRight(collengths[1]);
+                    string stepid = buildstep.Stepid.ToString().PadRight(collengths[2]);
 
-                    string disabled = buildstep.disabled.HasValue && buildstep.disabled.Value ? "Disabled" : "Enabled";
+                    string disabled = buildstep.Disabled.HasValue && buildstep.Disabled.Value ? "Disabled" : "Enabled";
                     disabled = disabled.PadRight(collengths[3]);
-                    string disable = buildstep.disable ? "Disable" : "Enable";
+                    string disable = buildstep.Disable ? "Disable" : "Enable";
                     disable = disable.PadRight(collengths[4]);
 
-                    if ((buildstep.disabled.HasValue && buildstep.disabled.Value) || buildstep.disable)
+                    if ((buildstep.Disabled.HasValue && buildstep.Disabled.Value) || buildstep.Disable)
                     {
                         Log($"    {stepname} {steptype} {stepid} {disabled} {disable}", ConsoleColor.DarkGray);
                     }
@@ -416,13 +414,13 @@ BuildVerbose");
                 }
             }
 
-            var allsteps = builds.SelectMany(b => b.steps)
+            var allsteps = builds.SelectMany(b => b.Steps)
                 .ToArray();
 
 
             var steptypes = allsteps
-                .Where(t => !t.disabled.HasValue || !t.disabled.Value)
-                .GroupBy(s => s.steptype)
+                .Where(t => !t.Disabled.HasValue || !t.Disabled.Value)
+                .GroupBy(s => s.Steptype)
                 .ToArray();
 
             Log($"Found {steptypes.Length} enabled build step types.");
@@ -430,10 +428,10 @@ BuildVerbose");
             foreach (var steptype in steptypes.OrderBy(t => -t.Count()))
             {
                 List<string> refs = builds
-                    .Where(b => b.steps.Any(s => s.steptype == steptype.Key && (!s.disabled.HasValue || !s.disabled.Value)))
-                    .SelectMany(b => b.steps
-                        .Where(s => s.steptype == steptype.Key && (!s.disabled.HasValue || !s.disabled.Value))
-                        .Select(s => $"'{b.buildid}.{s.stepname}'"))
+                    .Where(b => b.Steps.Any(s => s.Steptype == steptype.Key && (!s.Disabled.HasValue || !s.Disabled.Value)))
+                    .SelectMany(b => b.Steps
+                        .Where(s => s.Steptype == steptype.Key && (!s.Disabled.HasValue || !s.Disabled.Value))
+                        .Select(s => $"'{b.Buildid}.{s.Stepname}'"))
                     .Take(3)
                     .ToList();
                 if (refs.Count == 3)
@@ -534,76 +532,74 @@ BuildVerbose");
 
         static void TriggerBuilds(string server, string username, string password, List<Build> builds, bool dryRun)
         {
-            List<string> buildnames = new List<string>();
+            var buildnames = new List<string>();
 
-            using (WebClient client = new WebClient())
+            using var client = new WebClient();
+            if (username != null && password != null)
             {
-                if (username != null && password != null)
-                {
-                    string credentials = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{username}:{password}"));
-                    client.Headers[HttpRequestHeader.Authorization] = $"Basic {credentials}";
-                }
+                string credentials = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{username}:{password}"));
+                client.Headers[HttpRequestHeader.Authorization] = $"Basic {credentials}";
+            }
 
-                foreach (Build build in builds)
+            foreach (Build build in builds)
+            {
+                LogTCSection($"Queuing: {build.Buildid}", () =>
                 {
-                    LogTCSection($"Queuing: {build.buildid}", () =>
+                    foreach (Buildstep step in build.Steps.Where(s => s.Disable))
                     {
-                        foreach (Buildstep step in build.steps.Where(s => s.disable))
+                        string stepAddress = $"{server}/app/rest/buildTypes/{build.Buildid}/steps/{step.Stepid}/disabled";
+                        Log($"Disabling: {build.Buildid}.{step.Stepid}: '{step.Stepname}'", ConsoleColor.DarkMagenta);
+                        PutPlainTextContent(client, stepAddress, "true", build.DontRun || dryRun);
+                    }
+
+                    string propertiesstring = string.Empty;
+                    if (build.Properties.Count() > 0)
+                    {
+                        propertiesstring = string.Join(string.Empty,
+                            build.Properties.Select(p => $"<property name='{p.Key}' value='{p.Value}'/>"));
+
+                        propertiesstring = $"<properties>{propertiesstring}</properties>";
+                    }
+
+                    string buildContent = $"<build><buildType id='{build.Buildid}'/>{propertiesstring}</build>";
+                    string buildAddress = $"{server}/app/rest/buildQueue";
+                    Log($"Triggering build: {build.Buildid}", ConsoleColor.Magenta);
+                    dynamic queueResult = PostXmlContent(client, buildAddress, buildContent, build.DontRun || dryRun);
+
+                    if (!(build.DontRun || dryRun))
+                    {
+                        bool added = false;
+                        do
                         {
-                            string stepAddress = $"{server}/app/rest/buildTypes/{build.buildid}/steps/{step.stepid}/disabled";
-                            Log($"Disabling: {build.buildid}.{step.stepid}: '{step.stepname}'", ConsoleColor.DarkMagenta);
-                            PutPlainTextContent(client, stepAddress, "true", build.DontRun || dryRun);
-                        }
-
-                        string propertiesstring = string.Empty;
-                        if (build.properties.Count() > 0)
-                        {
-                            propertiesstring = string.Join(string.Empty,
-                                build.properties.Select(p => $"<property name='{p.Key}' value='{p.Value}'/>"));
-
-                            propertiesstring = $"<properties>{propertiesstring}</properties>";
-                        }
-
-                        string buildContent = $"<build><buildType id='{build.buildid}'/>{propertiesstring}</build>";
-                        string buildAddress = $"{server}/app/rest/buildQueue";
-                        Log($"Triggering build: {build.buildid}", ConsoleColor.Magenta);
-                        dynamic queueResult = PostXmlContent(client, buildAddress, buildContent, build.DontRun || dryRun);
-
-                        if (!(build.DontRun || dryRun))
-                        {
-                            bool added = false;
-                            do
+                            Thread.Sleep(1000);
+                            string buildid = queueResult.id;
+                            string queueAddress = $"{server}/app/rest/builds/id:{buildid}";
+                            dynamic buildResult = GetJsonContent(client, queueAddress);
+                            if (buildResult.waitReason == null)
                             {
-                                Thread.Sleep(1000);
-                                string buildid = queueResult.id;
-                                string queueAddress = $"{server}/app/rest/builds/id:{buildid}";
-                                dynamic buildResult = GetJsonContent(client, queueAddress);
-                                if (buildResult.waitReason == null)
-                                {
-                                    Log($"Build {buildid} queued.", ConsoleColor.Green);
-                                    added = true;
-                                }
-                                else if (buildResult.waitReason.Value.EndsWith("Build settings have not been finalized"))
-                                {
-                                    Log($"Build {buildid} not queued yet: {buildResult.waitReason.Value}");
-                                }
-                                else
-                                {
-                                    Log($"Broken build {buildid} is broken, cannot be bothered: {buildResult.waitReason.Value}", ConsoleColor.Yellow);
-                                    added = true;
-                                }
+                                Log($"Build {buildid} queued.", ConsoleColor.Green);
+                                added = true;
                             }
-                            while (!added);
+                            else if (buildResult.waitReason.Value.EndsWith("Build settings have not been finalized"))
+                            {
+                                Log($"Build {buildid} not queued yet: {buildResult.waitReason.Value}");
+                            }
+                            else
+                            {
+                                Log($"Broken build {buildid} is broken, cannot be bothered: {buildResult.waitReason.Value}", ConsoleColor.Yellow);
+                                added = true;
+                            }
                         }
+                        while (!added);
+                    }
 
-                        foreach (Buildstep step in build.steps.Where(s => s.disable))
-                        {
-                            string stepAddress = $"{server}/app/rest/buildTypes/{build.buildid}/steps/{step.stepid}/disabled";
-                            Log($"Enabling: {build.buildid}.{step.stepid}: '{step.stepname}'", ConsoleColor.DarkMagenta);
-                            PutPlainTextContent(client, stepAddress, "false", build.DontRun || dryRun);
-                        }
-                    });
-                }
+                    foreach (Buildstep step in build.Steps.Where(s => s.Disable))
+                    {
+                        string stepAddress = $"{server}/app/rest/buildTypes/{build.Buildid}/steps/{step.Stepid}/disabled";
+                        Log($"Enabling: {build.Buildid}.{step.Stepid}: '{step.Stepname}'", ConsoleColor.DarkMagenta);
+                        PutPlainTextContent(client, stepAddress, "false", build.DontRun || dryRun);
+                    }
+                });
             }
         }
 
@@ -803,7 +799,7 @@ BuildVerbose");
 
             if (username == null || password == null)
             {
-                Dictionary<string, string> tcvariables = GetTeamcityBuildVariables();
+                var tcvariables = GetTeamcityBuildVariables();
 
                 if (username == null && tcvariables.ContainsKey("teamcity.auth.userId"))
                 {
@@ -901,7 +897,7 @@ BuildVerbose");
         {
             string[] rows = File.ReadAllLines(filename);
 
-            Dictionary<string, string> dic = new Dictionary<string, string>();
+            var dic = new Dictionary<string, string>();
 
             foreach (string row in rows)
             {
@@ -919,7 +915,7 @@ BuildVerbose");
 
         private static void LogTCSection(string message, IEnumerable<string> collection)
         {
-            ConsoleColor oldColor = Console.ForegroundColor;
+            var oldColor = Console.ForegroundColor;
             try
             {
                 Console.ForegroundColor = ConsoleColor.Cyan;
@@ -950,7 +946,7 @@ BuildVerbose");
 
         private static void LogTCSection(string message, Action action)
         {
-            ConsoleColor oldColor = Console.ForegroundColor;
+            var oldColor = Console.ForegroundColor;
             try
             {
                 Console.ForegroundColor = ConsoleColor.Cyan;
@@ -981,7 +977,7 @@ BuildVerbose");
 
         private static T LogTCSection<T>(string message, Func<T> func)
         {
-            ConsoleColor oldColor = Console.ForegroundColor;
+            var oldColor = Console.ForegroundColor;
             try
             {
                 Console.ForegroundColor = ConsoleColor.Cyan;
@@ -1015,7 +1011,7 @@ BuildVerbose");
 
         private static void LogTCError(string message)
         {
-            ConsoleColor oldColor = Console.ForegroundColor;
+            var oldColor = Console.ForegroundColor;
             try
             {
                 Console.ForegroundColor = ConsoleColor.Red;
@@ -1029,7 +1025,7 @@ BuildVerbose");
 
         private static void LogTCWarning(string message)
         {
-            ConsoleColor oldColor = Console.ForegroundColor;
+            var oldColor = Console.ForegroundColor;
             try
             {
                 Console.ForegroundColor = ConsoleColor.Yellow;
@@ -1043,7 +1039,7 @@ BuildVerbose");
 
         private static void Log(string message, ConsoleColor color)
         {
-            ConsoleColor oldColor = Console.ForegroundColor;
+            var oldColor = Console.ForegroundColor;
             try
             {
                 Console.ForegroundColor = color;

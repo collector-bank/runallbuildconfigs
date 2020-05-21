@@ -1,9 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27703.2047
-MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RunAllBuildConfigs", "RunAllBuildConfigs\RunAllBuildConfigs.csproj", "{33203A30-D8BC-4E60-A226-328F7F3FC1C5}"
+# Visual Studio Version 16
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RunAllBuildConfigs", "RunAllBuildConfigs.csproj", "{33203A30-D8BC-4E60-A226-328F7F3FC1C5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
